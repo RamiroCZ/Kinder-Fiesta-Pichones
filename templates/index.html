@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kinder Fiesta</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <!-- Encabezado -->
+  <header>
+    <div class="header-left">
+      <img src="{{ url_for('static', filename='logo.jpeg') }}" alt="Logo KinderFiesta">
+      <h1>Kinder Fiesta</h1>
+    </div>
+    <div class="header-right">
+      <!-- IDs correctos, sin onclick: el JS añade listeners -->
+      <button id="adminBtn" class="btn-admin" type="button">Login Admin</button>
+      <button id="sugerirBtn" class="btn-sugerir" type="button">Sugerir Salón</button>
+    </div>
+  </header>
+
+  <!-- Buscador -->
+  <div id="buscador">
+    <input type="text" id="searchInput" placeholder="Buscar salón por nombre...">
+  </div>
+
+  <!-- Contenedor principal: grupos de 4 salones -->
+  <main id="salones-container">
+    {% for group in salones|batch(4, none) %}
+      <div class="salon-group">
+        <div class="salon-group-inner">
+          {% for s in group if s %}
+            <section id="salon-{{ s.id }}" class="salon" data-nombre="{{ s.nombre | lower }}">
+              <h2>{{ s.nombre }}</h2>
+
+              <div class="imagen-rotativa" data-timer="">
+                <button class="flecha izq" type="button">&#10094;</button>
+                <img
+                  src="{{ url_for('static', filename=(s.imagenes[0] if s.imagenes else 'S1.PNG')) }}"
+                  alt="Foto de {{ s.nombre }}"
+                  data-imgs='{{ s.imagenes | tojson }}'
+                  data-index="0">
+                <button class="flecha der" type="button">&#10095;</button>
+              </div>
+
+              <p><strong>Dirección:</strong> {{ s.direccion }}</p>
+              <p><strong>Teléfono:</strong> {{ s.telefono }}</p>
+              <p><strong>Mapa:</strong> <a href="{{ s.mapa_url }}" target="_blank">Ver en Google Maps</a></p>
+              <p><strong>Calificación promedio:</strong> <span class="promedio">{{ s.promedio if s.promedio else "Sin calificaciones" }}</span></p>
+
+              <details>
+                <summary>Ver comentarios</summary>
+                <div id="comentarios-{{ s.id }}" class="comentarios"></div>
+              </details>
+
+              <form class="comentario-form" data-salon-id="{{ s.id }}">
+                <label>Nombre <input type="text" name="usuario" required maxlength="50"></label>
+                <label>Comentario <textarea name="comentario" required maxlength="200"></textarea></label>
+                <label>Estrellas
+                  <select name="estrellas" required>
+                    <option value="5">5</option><option value="4">4</option>
+                    <option value="3">3</option><option value="2">2</option>
+                    <option value="1">1</option>
+                  </select>
+                </label>
+                <button type="submit">Enviar valoración</button>
+                <div class="form-msg"></div>
+              </form>
+            </section>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </main>
+
+  <!-- Modal Login Admin -->
+  <div id="modalLogin" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="close" data-close="modalLogin">&times;</span>
+      <h3>Acceso administrador</h3>
+      <form id="adminLoginForm">
+        <input type="text" name="usuario" required placeholder="Usuario">
+        <input type="password" name="clave" required placeholder="Contraseña">
+        <button type="submit" class="btn-admin">Ingresar</button>
+        <div class="login-msg"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Sugerir Salón -->
+  <div id="modalSugerir" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="close" data-close="modalSugerir">&times;</span>
+      <h3>Sugerir nuevo salón</h3>
+      <form id="sugerirForm">
+        <input type="text" name="nombre" required placeholder="Nombre del salón">
+        <input type="text" name="direccion" required placeholder="Dirección">
+        <input type="text" name="telefono" required placeholder="Teléfono">
+        <input type="url" name="mapa_url" required placeholder="URL de Google Maps">
+        <textarea name="imagenes" required placeholder='["salones/img1.jpg","salones/img2.jpg"]'></textarea>
+        <button type="submit" class="btn-sugerir">Enviar sugerencia</button>
+        <div class="sugerir-msg"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Script (defer para asegurar que el DOM esté listo) -->
+  <script src="{{ url_for('static', filename='main.js') }}" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
