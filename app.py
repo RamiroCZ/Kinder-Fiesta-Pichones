@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, jsonify, session
 import secrets
 import html
 
-app = Flask(_name_, static_folder='static', template_folder='templates')
+app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = secrets.token_hex(32)
 
 # ======== Paths y configuración de subida ========
