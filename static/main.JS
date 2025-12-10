@@ -4,6 +4,8 @@ window.openModal = openModal;
 window.closeModal = closeModal;
 window.eliminarComentario = eliminarComentario; // necesario por el onclick en comentarios
 
+
+
 // ===== Utilidad =====
 function esc(s) {
   return String(s)
@@ -86,6 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
       cargarComentarios(salonId);
     });
   });
+  
 
   // Enviar comentarios
   document.querySelectorAll(".comentario-form").forEach(form => {
@@ -234,6 +237,12 @@ async function loginAdmin(ev) {
       closeModal("modalLogin");
       mostrarBotonesAdmin();
       actualizarBotonAdmin();
+
+      // Mostrar botón de sugerencias
+      const verSugerenciasBtn = document.getElementById("verSugerenciasBtn");
+      if (verSugerenciasBtn) {
+        verSugerenciasBtn.style.display = "inline-block";
+      }
     } else {
       msg.textContent = data.error || "Credenciales incorrectas.";
     }
@@ -241,6 +250,7 @@ async function loginAdmin(ev) {
     msg.textContent = "Error de red.";
   }
 }
+
 
 // ===== Controles de visibilidad de botones admin =====
 function mostrarBotonesAdmin() {
@@ -266,14 +276,266 @@ function actualizarBotonAdmin() {
 // ===== Toggle admin (abrir login / cerrar sesión) =====
 function toggleAdmin() {
   if (sessionStorage.getItem("admin") === "true") {
+    // --- Cerrar sesión ---
     sessionStorage.removeItem("admin");
     ocultarBotonesAdmin();
     actualizarBotonAdmin();
-    alert("Sesión cerrada.");
+
+    // limpiar formulario de login
+    const adminLoginForm = document.getElementById("adminLoginForm");
+    if (adminLoginForm) adminLoginForm.reset();
+
+    // Ocultar botón de sugerencias
+    const verSugerenciasBtn = document.getElementById("verSugerenciasBtn");
+    if (verSugerenciasBtn) {
+      verSugerenciasBtn.style.display = "none";
+    }
+
+    // mostrar modal de despedida
+    document.getElementById("modalLogout").style.display = "grid";
   } else {
+    // abrir modal de login solo si el usuario lo pide
     openModal("modalLogin");
   }
 }
+
+// Exponer funciones globales si usas onclick en HTML
+window.toggleAdmin = toggleAdmin;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.eliminarComentario = eliminarComentario;
+
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  const adminBtn = document.getElementById("adminBtn");
+  const verSugerenciasBtn = document.getElementById("verSugerenciasBtn");
+  const modalLogin = document.getElementById("modalLogin");
+  const adminLoginForm = document.getElementById("adminLoginForm");
+  const modalLogout = document.getElementById("modalLogout");
+  const modalSugerencias = document.getElementById("modalSugerencias");
+  const listaSugerencias = document.getElementById("listaSugerencias");
+  const sugerenciasMsg = document.querySelector(".sugerencias-msg");
+
+  // ===== Toggle admin (abrir login / cerrar sesión) =====
+  adminBtn.addEventListener("click", () => {
+    if (sessionStorage.getItem("admin") === "true") {
+      // --- Cerrar sesión ---
+      sessionStorage.removeItem("admin");
+      adminLoginForm.reset();
+      adminBtn.textContent = "Login Admin";
+      verSugerenciasBtn.style.display = "none";
+      modalLogout.style.display = "grid";
+    } else {
+      modalLogin.style.display = "grid";
+    }
+  });
+
+  // ===== Ver sugerencias =====
+  verSugerenciasBtn.addEventListener("click", async () => {
+    try {
+      const res = await fetch("/admin/salones-pendientes");
+      const data = await res.json();
+      if (!res.ok) {
+        sugerenciasMsg.textContent = data.error || "No autorizado.";
+        return;
+      }
+      renderSugerencias(data);
+      modalSugerencias.style.display = "grid";
+    } catch {
+      sugerenciasMsg.textContent = "Error de red al cargar sugerencias.";
+    }
+  });
+
+  function renderSugerencias(salones) {
+    listaSugerencias.innerHTML = "";
+    if (!salones.length) {
+      listaSugerencias.innerHTML = "<p>No hay sugerencias pendientes.</p>";
+      return;
+    }
+    salones.forEach(s => {
+      const imgs = safeParseImages(s.imagenes);
+      const item = document.createElement("div");
+      item.className = "sugerencia-item";
+      item.innerHTML = `
+        <h4>${s.nombre}</h4>
+        <p><strong>Dirección:</strong> ${s.direccion}</p>
+        <p><strong>Teléfono:</strong> ${s.telefono}</p>
+        ${imgs.length ? `<div class="thumbs">${imgs.map(src => `<img src="/static/${src}" alt="${s.nombre}">`).join("")}</div>` : ""}
+        <div class="acciones">
+          <button class="aprobar" data-id="${s.id}">Aprobar</button>
+          <button class="denegar" data-id="${s.id}">Denegar</button>
+        </div>
+      `;
+      listaSugerencias.appendChild(item);
+    });
+  }
+
+  function safeParseImages(value) {
+    try {
+      const arr = typeof value === "string" ? JSON.parse(value) : value;
+      return Array.isArray(arr) ? arr : [];
+    } catch {
+      return [];
+    }
+  }
+
+  // ===== Delegación de eventos para botones Aprobar/Denegar =====
+  listaSugerencias.addEventListener("click", async e => {
+    const btn = e.target;
+    if (!btn.dataset.id) return;
+    const id = btn.dataset.id;
+
+    if (btn.classList.contains("aprobar")) {
+      await operarPendiente(id, "aceptar");
+    }
+    if (btn.classList.contains("denegar")) {
+      await operarPendiente(id, "denegar");
+    }
+  });
+
+
+
+  async function operarPendiente(id, accion) {
+    try {
+      const res = await fetch(`/admin/salones-pendientes/${id}/${accion}`, { method: "POST" });
+      const data = await res.json();
+
+      if (res.ok) {
+        // refrescar lista
+        const resList = await fetch("/admin/salones-pendientes");
+        const listData = await resList.json();
+        renderSugerencias(listData);
+
+        if (accion === "aceptar") location.reload();
+
+        sugerenciasMsg.textContent = data.mensaje || "Operación realizada.";
+      } else {
+        sugerenciasMsg.textContent = data.error || "Operación fallida.";
+      }
+    } catch {
+      sugerenciasMsg.textContent = "Error de red al operar.";
+    }
+  }
+});
+
+
+  // ===== Al enviar el formulario de login =====
+  adminLoginForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    const formData = new FormData(adminLoginForm);
+    const usuario = formData.get("usuario");
+    const clave = formData.get("clave");
+
+    try {
+      const res = await fetch("/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuario, clave })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        sessionStorage.setItem("admin", "true");
+        modalLogin.style.display = "none";
+        verSugerenciasBtn.style.display = "inline-block";
+        adminBtn.textContent = "Cerrar sesión";
+      } else {
+        document.querySelector(".login-msg").textContent = data.error || "Error de login";
+      }
+    } catch {
+      document.querySelector(".login-msg").textContent = "Error de red.";
+    }
+  });
+
+// ===== Sugerir salón =====
+async function sugerirSalon(ev) {
+  ev.preventDefault();
+  const form = ev.target;
+  const msg = form.querySelector(".sugerir-msg");
+  const fd = new FormData(form);
+
+  try {
+    const res = await fetch("/sugerir", { method: "POST", body: fd });
+    const data = await res.json();
+
+    if (res.ok) {
+      msg.textContent = "Sugerencia enviada correctamente.";
+      msg.classList.remove("error");
+      form.reset();
+      closeModal("modalSugerir"); // si usas modal
+    } else {
+      msg.textContent = data.error || "Error al enviar sugerencia.";
+      msg.classList.add("error");
+    }
+  } catch {
+    msg.textContent = "Error de red.";
+    msg.classList.add("error");
+  }
+}
+
+// Enganchar al formulario
+document.getElementById("sugerirForm").addEventListener("submit", sugerirSalon);
+
+
+  // Al presionar "Ver sugerencias"
+  verSugerenciasBtn.addEventListener("click", async () => {
+    const res = await fetch("/admin/salones-pendientes");
+    const data = await res.json();
+    if (res.ok) {
+      mostrarSugerencias(data);
+    } else {
+      alert(data.error || "No autorizado");
+    }
+  });
+
+// Función para renderizar sugerencias
+function mostrarSugerencias(salones) {
+  const listaSugerencias = document.getElementById("listaSugerencias");
+  const sugerenciasMsg = document.querySelector(".sugerencias-msg");
+
+  listaSugerencias.innerHTML = "";
+
+  if (!salones.length) {
+    listaSugerencias.innerHTML = "<p>No hay sugerencias pendientes.</p>";
+    return;
+  }
+
+  salones.forEach(s => {
+    const card = document.createElement("div");
+    card.className = "sugerencia-card";
+    card.innerHTML = `
+      <h3>${s.nombre}</h3>
+      <p><strong>Dirección:</strong> ${s.direccion}</p>
+      <p><strong>Teléfono:</strong> ${s.telefono}</p>
+      <p><strong>Mapa:</strong> <a href="${s.mapa_url}" target="_blank">Ver</a></p>
+      <p><strong>Imágenes:</strong> ${s.imagenes}</p>
+      <div class="acciones">
+        <button class="aprobar" data-id="${s.id}">Aprobar</button>
+        <button class="denegar" data-id="${s.id}">Denegar</button>
+      </div>
+    `;
+    listaSugerencias.appendChild(card);
+  });
+
+  document.getElementById("modalSugerencias").style.display = "grid";
+}
+
+  // Listeners para aprobar/denegar
+  contenedor.addEventListener("click", async e => {
+    if (e.target.classList.contains("aprobar")) {
+      const id = e.target.dataset.id;
+      const res = await fetch(`/admin/salones-pendientes/${id}/aceptar`, { method: "POST" });
+      alert((await res.json()).mensaje);
+    }
+    if (e.target.classList.contains("denegar")) {
+      const id = e.target.dataset.id;
+      const res = await fetch(`/admin/salones-pendientes/${id}/denegar`, { method: "POST" });
+      alert((await res.json()).mensaje);
+    }
+  });
+
 
 // ===== Eliminar comentario (solo admin) =====
 async function eliminarComentario(comentarioId) {
@@ -307,31 +569,20 @@ async function sugerirSalon(ev) {
   const form = ev.target;
   const msg = form.querySelector(".sugerir-msg");
 
-  const nombre = form.nombre.value.trim();
-  const direccion = form.direccion.value.trim();
-  const telefono = form.telefono.value.trim();
-  const mapa_url = form.mapa_url.value.trim();
-  const imagenes = form.imagenes.value.trim();
-
-  if (!nombre || !direccion || !telefono || !mapa_url || !imagenes) {
-    msg.textContent = "Todos los campos son obligatorios.";
-    msg.classList.add("error");
-    return;
-  } else {
-    msg.classList.remove("error");
-  }
+  const fd = new FormData(form);
 
   try {
-    const res = await fetch("/api/sugerir", {
+    const res = await fetch("/sugerir", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre, direccion, telefono, mapa_url, imagenes })
+      body: fd
     });
     const data = await res.json();
+
     if (res.ok) {
       msg.textContent = "Sugerencia enviada correctamente.";
+      msg.classList.remove("error");
       form.reset();
-      closeModal("modalSugerir");
+      closeModal("modalSugerir"); // si usas un modal para sugerir
     } else {
       msg.textContent = data.error || "Error al enviar sugerencia.";
       msg.classList.add("error");
@@ -341,5 +592,80 @@ async function sugerirSalon(ev) {
     msg.classList.add("error");
   }
 }
+
+
+// ===== Para previsualizar las imagenes que se estan sugeriendo como maximo 3 =====
+document.addEventListener("DOMContentLoaded", () => {
+  const inputImagenes = document.getElementById("imagenes");
+  const preview = document.getElementById("preview");
+
+  inputImagenes.addEventListener("change", () => {
+    preview.innerHTML = "";
+    const files = Array.from(inputImagenes.files);
+
+    if (files.length > 3) {
+      alert("Solo puedes subir hasta 3 imágenes");
+      inputImagenes.value = "";
+      return;
+    }
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.createElement("img");
+        img.src = e.target.result;
+        preview.appendChild(img);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+});
+
+// ==================== ELIMINAR SALÓN ====================
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".admin-del");
+  if (!btn) return;
+
+  if (sessionStorage.getItem("admin") !== "true") {
+    alert("No autorizado");
+    return;
+  }
+
+  const salonId = btn.dataset.id;
+  if (!salonId) return;
+
+  if (!confirm("¿Seguro que deseas eliminar este salón?")) return;
+
+  try {
+    const res = await fetch(`/admin/salones/${salonId}/eliminar`, {
+      method: "POST"
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "No se pudo eliminar el salón");
+      return;
+    }
+
+    // eliminar del DOM sin recargar
+    document.getElementById(`salon-${salonId}`)?.remove();
+    alert("Salón eliminado correctamente ");
+
+  } catch {
+    alert("Error de conexión");
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
 
 

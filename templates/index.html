@@ -13,10 +13,12 @@
       <img src="{{ url_for('static', filename='logo.jpeg') }}" alt="Logo KinderFiesta">
       <h1>Kinder Fiesta</h1>
     </div>
+
     <div class="header-right">
-      <!-- IDs correctos, sin onclick: el JS añade listeners -->
       <button id="adminBtn" class="btn-admin" type="button">Login Admin</button>
+      <button id="logoutBtn" class="btn-admin" type="button" style="display:none;">Logout Admin</button>
       <button id="sugerirBtn" class="btn-sugerir" type="button">Sugerir Salón</button>
+      <button id="verSugerenciasBtn" class="btn-admin" type="button" style="display:none;">Ver sugerencias</button>
     </div>
   </header>
 
@@ -25,7 +27,7 @@
     <input type="text" id="searchInput" placeholder="Buscar salón por nombre...">
   </div>
 
-  <!-- Contenedor principal: grupos de 4 salones -->
+  <!-- Contenedor principal -->
   <main id="salones-container">
     {% for group in salones|batch(4, none) %}
       <div class="salon-group">
@@ -57,7 +59,8 @@
               <form class="comentario-form" data-salon-id="{{ s.id }}">
                 <label>Nombre <input type="text" name="usuario" required maxlength="50"></label>
                 <label>Comentario <textarea name="comentario" required maxlength="200"></textarea></label>
-                <label>Estrellas
+                <label class="estrellas-label">
+                  Estrellas ⭐
                   <select name="estrellas" required>
                     <option value="5">5</option><option value="4">4</option>
                     <option value="3">3</option><option value="2">2</option>
@@ -67,6 +70,13 @@
                 <button type="submit">Enviar valoración</button>
                 <div class="form-msg"></div>
               </form>
+
+              <!-- BOTÓN DE ELIMINAR -->
+              <button class="admin-del"
+               data-id="{{ s.id }}"
+               style="display:none">
+              Eliminar salón
+              </button>
             </section>
           {% endfor %}
         </div>
@@ -88,27 +98,104 @@
     </div>
   </div>
 
-  <!-- Modal Sugerir Salón -->
+  <!-- Modal Logout -->
+  <div id="modalLogout" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" data-close="modalLogout">&times;</span>
+      <h3>Sesión cerrada</h3>
+      <p>Hasta pronto, administrador 👋</p>
+    </div>
+  </div>
+
+  <!-- Modal Sugerir -->
   <div id="modalSugerir" class="modal" style="display: none;">
     <div class="modal-content">
       <span class="close" data-close="modalSugerir">&times;</span>
       <h3>Sugerir nuevo salón</h3>
-      <form id="sugerirForm">
+      <form id="sugerirForm" action="/sugerir" method="post" enctype="multipart/form-data">
         <input type="text" name="nombre" required placeholder="Nombre del salón">
         <input type="text" name="direccion" required placeholder="Dirección">
         <input type="text" name="telefono" required placeholder="Teléfono">
         <input type="url" name="mapa_url" required placeholder="URL de Google Maps">
-        <textarea name="imagenes" required placeholder='["salones/img1.jpg","salones/img2.jpg"]'></textarea>
+
+        <label for="imagenes">Imágenes del salón (mínimo 1, máximo 3)</label>
+        <input type="file" id="imagenes" name="imagenes" accept="image/*" multiple required>
+        <div id="preview" class="preview"></div>
+
         <button type="submit" class="btn-sugerir">Enviar sugerencia</button>
         <div class="sugerir-msg"></div>
       </form>
     </div>
   </div>
 
-  <!-- Script (defer para asegurar que el DOM esté listo) -->
+  <!-- Modal Ver Sugerencias -->
+  <div id="modalSugerencias" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" data-close="modalSugerencias">&times;</span>
+      <h3>Sugerencias pendientes</h3>
+      <div id="listaSugerencias"></div>
+      <div class="sugerencias-msg"></div>
+    </div>
+  </div>
+
+  <!-- MODAL ÚNICO PARA ELIMINAR SALÓN -->
+  <div id="modal-eliminar" class="modal" style="display:none">
+    <div class="modal-content">
+      <span class="close" data-close="modal-eliminar">&times;</span>
+      <h3>Confirmar eliminación</h3>
+      <p>Ingresa la contraseña de admin para eliminar el salón:</p>
+      <input type="password" id="password-admin" placeholder="Contraseña">
+      <button id="btnEliminarConfirmar">Eliminar</button>
+    </div>
+  </div>
+
+  <!-- Script principal -->
   <script src="{{ url_for('static', filename='main.js') }}" defer></script>
+
+  <!-- SCRIPT PARA ELIMINAR SIN PROMPT -->
+  <script>
+    function mostrarModalEliminar(idSalon) {
+      const modal = document.getElementById("modal-eliminar");
+      modal.dataset.id = idSalon;
+      document.getElementById("password-admin").value = "";
+      modal.style.display = "flex";
+    }
+
+    document.getElementById("btnEliminarConfirmar").addEventListener("click", async () => {
+      const modal = document.getElementById("modal-eliminar");
+      const idSalon = modal.dataset.id;
+      const password = document.getElementById("password-admin").value;
+
+      if (!password) {
+        alert("Ingrese la contraseña");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("password", password);
+
+      const response = await fetch(`/eliminar_salon/${idSalon}`, {
+        method: "POST",
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert("Salón eliminado correctamente");
+        window.location.reload();
+      } else {
+        alert("Contraseña incorrecta");
+      }
+
+      modal.style.display = "none";
+    });
+  </script>
+
 </body>
 </html>
+
+
 
 
 

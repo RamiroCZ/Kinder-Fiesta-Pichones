@@ -139,6 +139,19 @@ header img {
   padding: 8px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
+  box-sizing: border-box;   /* asegura que padding/borde no rompan el ancho */
+}
+
+/* Evitar que el textarea se pueda redimensionar */
+.comentario-form textarea {
+  resize: none;             /* bloquea el cambio de tamaño */
+  height: 100px;            /* altura fija para comentarios */
+}
+
+/* Opcional: altura uniforme para input y select */
+.comentario-form input,
+.comentario-form select {
+  height: 40px;             /* todos iguales en altura */
 }
 
 .comentario-form button {
@@ -169,6 +182,17 @@ header img {
   font-size: 0.85rem;
 }
 
+/* ====== Label de estrellas con ícono ====== */
+.estrellas-label {
+  display: flex;
+  align-items: center;
+  gap: 6px; /* espacio entre texto y estrella */
+}
+
+.estrella-icon {
+  width: 18px;
+  height: 18px;
+}
 
 .admin-del {
   background: #ef4444;
@@ -205,13 +229,13 @@ header img {
   position: absolute;
   left: 3%;
   width: 94%;
-  height: 8px;         /* grosor visible */
-  top: 50%;
+  height: 8px;
+  top: 103%;              /* en vez de top: 50% */
   transform: translateY(-50%);
   background: linear-gradient(90deg, #0f9d58 0%, #ffd700 50%, #2563eb 100%);
-  opacity: 0.4;        /* visible pero suave */
+  opacity: 0.4;
   border-radius: 6px;
-  z-index: 0;          /* detrás de las tarjetas */
+  z-index: 0;
 }
 
 /* Distribución de las tarjetas dentro del grupo: 4 por fila */
@@ -312,4 +336,135 @@ header img {
   .salon-group-inner { grid-template-columns: 1fr; }
 }
 
+/* Evitar que el textarea del modal se pueda redimensionar */
+#sugerirForm textarea {
+  resize: none;
+  height: 100px; /* o el tamaño que quieras fijo */
+}
+
+/* Para previsualizar los salones que se estan sugeriendo como maximo 3 imagenes */
+.preview {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.preview img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border: 2px solid #006400;
+  border-radius: 6px;
+}
+
+/* Contenedor de miniaturas */
+.thumbs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* Miniaturas */
+.thumbs img {
+  max-width: 120px;   /* ancho máximo */
+  max-height: 90px;   /* alto máximo */
+  object-fit: cover;  /* recorta manteniendo proporción */
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+
+/* Sugerencia de salon de eventos una vez logueado el admin */
+.sugerencias-lista {
+  margin: 1rem;
+  display: grid;
+  gap: 12px;
+}
+.sugerencia-card {
+  border: 2px solid #006400;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+.sugerencia-card button {
+  margin-right: 8px;
+}
+
+/* Boton eliminar salon */
+.eliminar-salon {
+  background-color: #e53935;   /* rojo intenso */
+  color: #fff;                 /* texto blanco */
+  border: none;
+  padding: 8px 14px;
+  margin-top: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.eliminar-salon:hover {
+  background-color: #c62828;   /* rojo más oscuro al pasar el mouse */
+}
+
+/* Modal general */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: none; /* se muestra con JS */
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Contenido del modal */
+.modal-content {
+  background: #fff;
+  padding: 20px 30px;
+  border-radius: 10px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  text-align: center;
+  position: relative;
+}
+
+/* Botón de cerrar (X) */
+.modal-content .close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* Input de contraseña */
+#claveEliminar {
+  width: 100%;
+  padding: 8px 10px;
+  margin: 15px 0;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+/* Botón confirmar */
+#btnConfirmarEliminar {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  background-color: #ff4d4f;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#btnConfirmarEliminar:hover {
+  background-color: #ff1f1f;
+}
 

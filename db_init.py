@@ -78,8 +78,7 @@ def seed_demo():
 
 if __name__ == "__main__":
     crear_bd()
-    seed_demo()
-    print("BD creada y 10 salones cargados.")
+    print("cargado.")
 
 
 
